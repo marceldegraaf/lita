@@ -44,6 +44,13 @@ module Lita
       handlers << handler
     end
 
+    # Removes a handler from the global registry.
+    # @param handler [Lita::Handler] The handler class.
+    # @return [void]
+    def unregister_handler(handler)
+      @handlers = handlers - [handler]
+    end
+
     # The global configuration object. Provides user settings for the robot.
     # @return [Lita::Config] The Lita configuration object.
     def config
