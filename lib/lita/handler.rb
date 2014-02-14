@@ -91,7 +91,7 @@ module Lita
         if name
           Util.underscore(name.split("::").last)
         else
-          raise I18n.t("lita.handler.name_required")
+          raise "Handlers that are anonymous classes must define self.name."
         end
       end
 
@@ -107,16 +107,6 @@ module Lita
       def on(event_name, method_name)
         event_subscriptions[normalize_event(event_name)] << method_name
       end
-
-      # Returns the translation for a key, automatically namespaced to the handler.
-      # @param key [String] The key of the translation.
-      # @param hash [Hash] An optional hash of values to be interpolated in the string.
-      # @return [String] The translated string.
-      def translate(key, hash = {})
-        I18n.translate("lita.handlers.#{namespace}.#{key}", hash)
-      end
-
-      alias_method :t, :translate
 
       # Triggers an event, invoking methods previously registered with {on} and
       # passing them a payload hash with any arbitrary data.
@@ -169,20 +159,17 @@ module Lita
 
       # Logs the dispatch of message.
       def log_dispatch(route)
-        Lita.logger.debug I18n.t(
-          "lita.handler.dispatch",
-          handler: name,
-          method: route.method_name
-        )
+        Lita.logger.debug <<-LOG.chomp
+Dispatching message to #{self}##{route.method_name}.
+LOG
       end
 
       def log_dispatch_error(e)
-        Lita.logger.error I18n.t(
-          "lita.handler.exception",
-          handler: name,
-          message: e.message,
-          backtrace: e.backtrace.join("\n")
-        )
+        Lita.logger.error <<-ERROR.chomp
+#{name} crashed. The exception was:
+#{e.message}
+#{e.backtrace.join("\n")}
+ERROR
       end
 
       def normalize_event(event_name)
@@ -196,23 +183,6 @@ module Lita
       @redis = Redis::Namespace.new(redis_namespace, redis: Lita.redis)
     end
 
-    # Invokes the given block after the given number of seconds.
-    # @param interval [Integer] The number of seconds to wait before invoking the block.
-    # @yieldparam timer [Lita::Timer] The current {Lita::Timer} instance.
-    def after(interval, &block)
-      Timer.new(interval: interval, &block).start
-    end
-
-    # Invokes the given block repeatedly, waiting the given number of seconds between each
-    # invocation.
-    # @param interval [Integer] The number of seconds to wait before each invocation of the block.
-    # @yieldparam timer [Lita::Timer] The current {Lita::Timer} instance.
-    # @note The block should call {Lita::Timer#stop} at a terminating condition to avoid infinite
-    #   recursion.
-    def every(interval, &block)
-      Timer.new(interval: interval, recurring: true, &block).start
-    end
-
     # Creates a new +Faraday::Connection+ for making HTTP requests.
     # @param options [Hash] A set of options passed on to Faraday.
     # @yield [builder] A Faraday builder object for adding middleware.
@@ -221,13 +191,6 @@ module Lita
       options = default_faraday_options.merge(options)
       Faraday::Connection.new(nil, options, &block)
     end
-
-    # @see .translate
-    def translate(*args)
-      self.class.translate(*args)
-    end
-
-    alias_method :t, :translate
 
     private
 

@@ -1,6 +1,6 @@
 describe Lita::Adapters::Shell do
   let(:robot) do
-    instance_double("Lita::Robot", name: "Lita", mention_name: "LitaBot", alias: "/")
+    double("Lita::Robot", name: "Lita", mention_name: "LitaBot", alias: "/")
   end
 
   subject { described_class.new(robot) }
@@ -37,12 +37,12 @@ describe Lita::Adapters::Shell do
       expect(subject).to receive(:puts) do |messages|
         expect(messages.first).to include("bar")
       end
-      subject.send_messages(instance_double("Lita::Source"), "bar")
+      subject.send_messages(double("target"), "bar")
     end
 
     it "doesn't output empty messages" do
       expect(subject).to receive(:puts).with([])
-      subject.send_messages(instance_double("Lita::Source"), "")
+      subject.send_messages(double("target"), "")
     end
   end
 

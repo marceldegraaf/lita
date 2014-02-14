@@ -3,8 +3,12 @@ module Lita
     # Provides online help about Lita commands for users.
     class Help < Handler
       route(/^help\s*(.+)?/, :help, command: true, help: {
-        "help" => t("help.help_value"),
-        t("help.help_command_key") => t("help.help_command_value")
+        "help" => %{
+Lists help information for terms and command the robot will respond to.
+}.gsub(/\n/, ""),
+        "help COMMAND" => %{
+Lists help information for terms or commands that begin with COMMAND.
+}.gsub(/\n/, "")
       })
 
       # Outputs help information about Lita commands.
@@ -27,15 +31,19 @@ module Lita
 
       # Creates an array of help info for all registered routes.
       def build_help(response)
-        Lita.handlers.map do |handler|
-          handler.routes.map do |route|
-            route.help.map do |command, description|
-              if authorized?(response.user, route.required_groups)
-                help_command(route, command, description)
-              end
+        output = []
+
+        Lita.handlers.each do |handler|
+          handler.routes.each do |route|
+            route.help.each do |command, description|
+              next unless authorized?(response.user, route.required_groups)
+              command = "#{name}: #{command}" if route.command?
+              output << "#{command} - #{description}"
             end
           end
-        end.flatten.compact
+        end
+
+        output
       end
 
       # Filters the help output by an optional command.
@@ -47,12 +55,6 @@ module Lita
         else
           output
         end
-      end
-
-      # Formats an individual command's help message.
-      def help_command(route, command, description)
-        command = "#{name}: #{command}" if route.command?
-        "#{command} - #{description}"
       end
 
       # The way the bot should be addressed in order to trigger a command.

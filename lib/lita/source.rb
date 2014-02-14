@@ -27,12 +27,25 @@ module Lita
     #   this string will differ depending on the chat service.
     # @param private_message [Boolean] A flag indicating whether or not the
     #   message was sent privately.
-    def initialize(user: nil, room: nil, private_message: false)
-      @user = user
-      @room = room
-      @private_message = private_message
+    def initialize(*args)
+      options = args.last.is_a?(Hash) ? args.pop : {}
 
-      raise ArgumentError, I18n.t("lita.source.user_or_room_required") if user.nil? && room.nil?
+      @user = options[:user]
+      @room = options[:room]
+      @private_message = options[:private_message]
+
+      if args.size > 0
+        Lita.logger.warn <<-WARNING.chomp
+Passing positional arguments to Source is deprecated. \
+Use Source.new(user: user, room: room, private_message: pm) instead.
+WARNING
+        @user = args[0] if args[0]
+        @room = args[1] if args[1]
+      end
+
+      if user.nil? && room.nil?
+        raise ArgumentError.new("Either a user or a room is required.")
+      end
 
       @private_message = true if room.nil?
     end

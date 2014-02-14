@@ -15,8 +15,8 @@ describe Lita::Robot do
   end
 
   context "with registered handlers" do
-    let(:handler1) { class_double("Lita::Handler", http_routes: [], trigger: nil) }
-    let(:handler2) { class_double("Lita::Handler", http_routes: [], trigger: nil) }
+    let(:handler1) { double("Handler 1").as_null_object }
+    let(:handler2) { double("Handler 2").as_null_object }
 
     before do
       allow(Lita).to receive(:handlers).and_return([handler1, handler2])
@@ -40,12 +40,11 @@ describe Lita::Robot do
   end
 
   describe "#run" do
-    let(:thread) { instance_double("Thread", :abort_on_exception= => true, join: nil) }
+    let(:thread) { double("Thread", :abort_on_exception= => true, join: nil) }
 
     before do
       allow_any_instance_of(Lita::Adapters::Shell).to receive(:run)
-      allow_any_instance_of(Puma::Server).to receive(:run)
-      allow_any_instance_of(Puma::Server).to receive(:add_tcp_listener)
+      allow_any_instance_of(Thin::Server).to receive(:start)
 
       allow(Thread).to receive(:new) do |&block|
         block.call
@@ -59,7 +58,13 @@ describe Lita::Robot do
     end
 
     it "starts the web server" do
-      expect_any_instance_of(Puma::Server).to receive(:run)
+      expect_any_instance_of(Thin::Server).to receive(:start)
+      subject.run
+    end
+
+    it "doesn't silence thin if config.http.debug is true" do
+      Lita.config.http.debug = true
+      expect_any_instance_of(Thin::Server).not_to receive(:silent=)
       subject.run
     end
 
@@ -73,20 +78,20 @@ describe Lita::Robot do
   end
 
   describe "#send_message" do
-    let(:source) { instance_double("Lita::Source") }
+    let(:source) { double("Source") }
 
     it "delegates to the adapter" do
       expect_any_instance_of(
         Lita::Adapters::Shell
       ).to receive(:send_messages).with(
-        source, %w(foo bar)
+        source, ["foo", "bar"]
       )
       subject.send_messages(source, "foo", "bar")
     end
   end
 
   describe "#set_topic" do
-    let(:source) { instance_double("Lita::Source") }
+    let(:source) { double("Source") }
 
     it "delegates to the adapter" do
       expect_any_instance_of(Lita::Adapters::Shell).to receive(:set_topic).with(

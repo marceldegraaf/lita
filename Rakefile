@@ -1,8 +1,8 @@
 require "bundler/gem_tasks"
+require "cane/rake_task"
 require "rspec/core/rake_task"
-require "rubocop/rake_task"
 
+Cane::RakeTask.new
 RSpec::Core::RakeTask.new
-Rubocop::RakeTask.new
 
-task default: [:spec, :rubocop]
+task default: [:spec, :cane]

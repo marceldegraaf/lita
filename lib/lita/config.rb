@@ -6,9 +6,15 @@ module Lita
       # @return [Lita::Config] The default configuration.
       def default_config
         new.tap do |c|
-          load_robot_configs(c)
+          c.robot = new
+          c.robot.name = "Lita"
+          c.robot.adapter = :shell
+          c.robot.log_level = :info
+          c.robot.admins = nil
           c.redis = new
-          load_http_configs(c)
+          c.http = new
+          c.http.port = 8080
+          c.http.debug = false
           c.adapter = new
           c.handlers = new
           load_handler_configs(c)
@@ -24,11 +30,11 @@ module Lita
         begin
           load(config_path)
         rescue Exception => e
-          Lita.logger.fatal I18n.t(
-            "lita.config.exception",
-            message: e.message,
-            backtrace: e.backtrace.join("\n")
-          )
+          Lita.logger.fatal <<-MSG
+Lita configuration file could not be processed. The exception was:
+#{e.message}
+#{e.backtrace.join("\n")}
+MSG
           abort
         end if File.exist?(config_path)
       end
@@ -43,24 +49,6 @@ module Lita
           handler_config = config.handlers[handler.namespace] = new
           handler.default_config(handler_config)
         end
-      end
-
-      # Adds and populates a Config object for the built-in web server.
-      def load_http_configs(config)
-        config.http = new
-        config.http.host = "0.0.0.0"
-        config.http.port = 8080
-        config.http.min_threads = 0
-        config.http.max_threads = 16
-      end
-
-      # Adds and populates a Config object for the Robot.
-      def load_robot_configs(config)
-        config.robot = new
-        config.robot.name = "Lita"
-        config.robot.adapter = :shell
-        config.robot.log_level = :info
-        config.robot.admins = nil
       end
     end
 
@@ -77,11 +65,6 @@ module Lita
     # @return The value.
     def [](key)
       super(key.to_sym)
-    end
-
-    # Deeply freezes the object to prevent any further mutation.
-    def finalize
-      IceNine.deep_freeze!(self)
     end
 
     # Allows keys to be read and written with struct-like syntax.

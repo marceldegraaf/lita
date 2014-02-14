@@ -74,7 +74,7 @@ module Lita
     # @return [void]
     def shut_down
       trigger(:shut_down_started)
-      @server.stop(true) if @server
+      @server.stop if @server
       @server_thread.join if @server_thread
       @adapter.shut_down
       trigger(:shut_down_complete)
@@ -100,7 +100,7 @@ module Lita
       adapter_class = Lita.adapters[adapter_name.to_sym]
 
       unless adapter_class
-        Lita.logger.fatal I18n.t("lita.robot.unknown_adapter", adapter: adapter_name)
+        Lita.logger.fatal("Unknown adapter: :#{adapter_name}.")
         abort
       end
 
@@ -109,14 +109,14 @@ module Lita
 
     # Starts the web server.
     def run_app
-      http_config = Lita.config.http
-
       @server_thread = Thread.new do
-        @server = Puma::Server.new(app)
-        @server.add_tcp_listener(http_config.host, http_config.port.to_i)
-        @server.min_threads = http_config.min_threads
-        @server.max_threads = http_config.max_threads
-        @server.run
+        @server = Thin::Server.new(
+          app,
+          Lita.config.http.port.to_i,
+          signals: false
+        )
+        @server.silent = true unless Lita.config.http.debug
+        @server.start
       end
 
       @server_thread.abort_on_exception = true

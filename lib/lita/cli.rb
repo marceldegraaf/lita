@@ -1,8 +1,7 @@
 require "thor"
 
-require_relative "common"
-require_relative "daemon"
-require_relative "version"
+require "lita/daemon"
+require "lita/version"
 
 module Lita
   # The command line interface for Lita.
@@ -10,12 +9,7 @@ module Lita
     include Thor::Actions
 
     def self.source_root
-      Lita.template_root
-    end
-
-    def self.file_path_for(file_name, default_path)
-      base_path = Process.euid == 0 ? default_path : ENV["HOME"]
-      File.join(base_path, file_name)
+      File.expand_path("../../../templates", __FILE__)
     end
 
     default_task :start
@@ -34,12 +28,14 @@ module Lita
     option :log_file,
       aliases: "-l",
       banner: "PATH",
-      default: file_path_for("lita.log", "/var/log"),
+      default: Process.euid == 0 ?
+        "/var/log/lita.log" : File.expand_path("lita.log", ENV["HOME"]),
       desc: "Path where the log file should be written when daemonized"
     option :pid_file,
       aliases: "-p",
       banner: "PATH",
-      default: file_path_for("lita.pid", "/var/run"),
+      default: Process.euid == 0 ?
+        "/var/run/lita.pid" : File.expand_path("lita.pid", ENV["HOME"]),
       desc: "Path where the PID file should be written when daemonized"
     option :kill,
       aliases: "-k",
@@ -50,7 +46,11 @@ module Lita
       begin
         Bundler.require
       rescue Bundler::GemfileNotFound
-        say I18n.t("lita.cli.no_gemfile_warning"), :red
+        no_gemfile_warning = <<-WARN.chomp
+The default command "start" must be run inside a Lita project. Try running \
+`lita new` to generate a new Lita project or `lita help` to see all commands.
+WARN
+        say no_gemfile_warning, :red
         abort
       end
 
@@ -161,9 +161,13 @@ module Lita
     end
 
     def optional_content
+      coveralls_question = <<-Q.chomp
+Do you want to generate code coverage information with SimpleCov \
+and Coveralls.io?
+Q
       {
-        travis: yes?(I18n.t("lita.cli.travis_question")),
-        coveralls: yes?(I18n.t("lita.cli.coveralls_question"))
+        travis: yes?("Do you want to test your plugin on Travis CI?"),
+        coveralls: yes?(coveralls_question)
       }
     end
   end

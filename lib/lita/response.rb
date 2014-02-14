@@ -23,10 +23,20 @@ module Lita
     def_delegators :message, :args, :reply, :reply_privately, :user, :command?
 
     # @param message [Lita::Message] The incoming message.
-    # @param pattern [Regexp] The pattern the incoming message matched.
-    def initialize(message, pattern)
-      self.message = message
-      self.pattern = pattern
+    # @param matches [Regexp] The pattern the incoming message matched.
+    def initialize(*args)
+      options = args.last.is_a?(Hash) ? args.pop : {}
+
+      self.message = args[0]
+      self.pattern = args[1]
+
+      if options[:matches]
+        Lita.logger.warn <<-WARNING.chomp
+Passing a "matches" option to Response's constructor is deprecated. \
+Use Response.new(message, pattern) instead.
+        WARNING
+        @matches = options[:matches]
+      end
     end
 
     # An array of matches from scanning the message against the route pattern.
