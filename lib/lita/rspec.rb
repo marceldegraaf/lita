@@ -3,15 +3,13 @@ begin
   require "rspec/expectations"
   require "rspec/mocks"
 rescue LoadError
-  abort "Lita::RSpec requires both RSpec::Mocks and RSpec::Expectations."
+  abort I18n.t("lita.rspec.full_suite_required")
 end
 
-major, minor, patch, *pre = RSpec::Mocks::Version::STRING.split(/\./)
-if major == "2" && minor.to_i < 14
-  abort "RSpec::Mocks 2.14 or greater is required to use Lita::RSpec."
-end
+major, minor, _patch, *_pre = RSpec::Mocks::Version::STRING.split(/\./)
+abort I18n.t("lita.rspec.mocks_expect_syntax_required") if major == "2" && minor.to_i < 14
 
-require "lita/rspec/handler"
+require_relative "rspec/handler"
 
 module Lita
   # Extras for +RSpec+ that facilitate the testing of Lita code.
@@ -32,14 +30,14 @@ module Lita
           end
         end
 
-        set_up_redis(base)
+        prepare_redis(base)
       end
 
       private
 
       # Set up Redis to use the test namespace and clear out before each
       # example.
-      def set_up_redis(base)
+      def prepare_redis(base)
         base.class_eval do
           before do
             stub_const("Lita::REDIS_NAMESPACE", "lita.test")

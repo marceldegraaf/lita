@@ -48,6 +48,7 @@ describe Lita::Config do
     end
 
     it "doesn't attempt to load lita_config.rb if it doesn't exist" do
+      allow(File).to receive(:exist?).and_return(false)
       expect(described_class).not_to receive(:load)
       described_class.load_user_config
     end
@@ -57,6 +58,13 @@ describe Lita::Config do
       allow(described_class).to receive(:load) { Lita.non_existent_method }
       expect(Lita.logger).to receive(:fatal).with(/could not be processed/)
       expect { described_class.load_user_config }.to raise_error(SystemExit)
+    end
+  end
+
+  describe "#finalize" do
+    it "freezes the configuration" do
+      subject.finalize
+      expect { subject.robot = "Assignment is impossible!" }.to raise_error(RuntimeError, /frozen/)
     end
   end
 end
